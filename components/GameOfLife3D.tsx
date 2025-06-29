@@ -9,126 +9,10 @@ import { GameOfLife3D as GameEngine, type GameOfLife3DConfig, type Grid3D } from
 interface VisualCell {
   scale: number;
   age: number;
-  targetScale: number;
-  fadeState: 'appearing' | 'stable' | 'disappearing';
 }
 
 const MAX_AGE = 15;
-const FADE_IN_SPEED = 0.08;
-const FADE_OUT_SPEED = 0.12;
-const SCALE_TRANSITION_SPEED = 0.1;
-
-// Hook for smooth visual grid animations
-function useAnimatedVisualGrid(visualGrid: VisualCell[][][], gridSize: number) {
-  const [animatedGrid, setAnimatedGrid] = useState<VisualCell[][][]>([]);
-  const animationFrameRef = useRef<number>();
-
-  useEffect(() => {
-    // Initialize animatedGrid when visualGrid becomes available
-    if (visualGrid.length > 0 && animatedGrid.length === 0) {
-      setAnimatedGrid(visualGrid);
-      return;
-    }
-
-    // Safety check: ensure visualGrid is properly initialized
-    if (!visualGrid.length || !visualGrid[0] || visualGrid.length !== gridSize) {
-      return;
-    }
-
-    const animate = () => {
-      setAnimatedGrid(currentGrid => {
-        // Additional safety check within animation
-        if (!currentGrid.length || !visualGrid.length) {
-          return currentGrid;
-        }
-
-        const newGrid = currentGrid.map((xSlice, x) =>
-          xSlice.map((ySlice, y) =>
-            ySlice.map((visual, z) => {
-              const targetVisual = visualGrid[x]?.[y]?.[z];
-              if (!targetVisual) return visual;
-
-              let newScale = visual.scale;
-              let newFadeState = visual.fadeState;
-
-              // Smooth transition for appearing cells
-              if (targetVisual.fadeState === 'appearing' && visual.scale < targetVisual.targetScale) {
-                newScale = Math.min(targetVisual.targetScale, visual.scale + SCALE_TRANSITION_SPEED);
-                newFadeState = newScale >= 0.95 ? 'stable' : 'appearing';
-              }
-              // Smooth transition for disappearing cells
-              else if (targetVisual.fadeState === 'disappearing' && visual.scale > targetVisual.targetScale) {
-                newScale = Math.max(targetVisual.targetScale, visual.scale - SCALE_TRANSITION_SPEED);
-                newFadeState = 'disappearing';
-              }
-              // Update to match target immediately for stable cells
-              else if (targetVisual.fadeState === 'stable') {
-                newScale = targetVisual.scale;
-                newFadeState = targetVisual.fadeState;
-              }
-              // Copy other values from target
-              else {
-                newScale = targetVisual.scale;
-                newFadeState = targetVisual.fadeState;
-              }
-
-              return {
-                ...targetVisual,
-                scale: newScale,
-                fadeState: newFadeState
-              };
-            })
-          )
-        );
-
-        // Check if animation should continue
-        const hasActiveAnimations = newGrid.some((xSlice, x) =>
-          xSlice.some((ySlice, y) =>
-            ySlice.some((visual, z) => {
-              const target = visualGrid[x]?.[y]?.[z];
-              return target && (
-                (visual.fadeState === 'appearing' && visual.scale < 0.95) ||
-                (visual.fadeState === 'disappearing' && visual.scale > 0.01)
-              );
-            })
-          )
-        );
-
-        if (hasActiveAnimations) {
-          animationFrameRef.current = requestAnimationFrame(animate);
-        }
-
-        return newGrid;
-      });
-    };
-
-    // Start animation if there are transitions to animate
-    const hasTransitions = visualGrid.some((xSlice, x) =>
-      xSlice.some((ySlice, y) =>
-        ySlice.some(visual => 
-          visual.fadeState === 'appearing' || visual.fadeState === 'disappearing'
-        )
-      )
-    );
-
-    if (hasTransitions && !animationFrameRef.current) {
-      animationFrameRef.current = requestAnimationFrame(animate);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = undefined;
-      }
-    };
-  }, [visualGrid, gridSize]);
-
-  useEffect(() => {
-    setAnimatedGrid(visualGrid);
-  }, [visualGrid, animatedGrid.length]);
-
-  return animatedGrid;
-}
+const FADE_SPEED = 0.15;
 
 function SimulationGroup({ 
   gridSize, 
@@ -147,7 +31,6 @@ function SimulationGroup({
   const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
   const tempObject = useRef(new THREE.Object3D());
   const tempColor = useRef(new THREE.Color());
-  const [lastUpdateTime, setLastUpdateTime] = useState(0);
 
   // Auto-rotation when not interacting
   useFrame(() => {
@@ -160,14 +43,7 @@ function SimulationGroup({
 
   const updateVisuals = useCallback(() => {
     const cellInstances = instancedMeshRef.current;
-    if (!cellInstances) return;
-
-    // Safety check: ensure grids are properly initialized
-    if (!logicGrid.length || !visualGrid.length || 
-        !logicGrid[0] || !visualGrid[0] || 
-        logicGrid.length !== gridSize || visualGrid.length !== gridSize) {
-      return;
-    }
+    if (!cellInstances || !logicGrid.length || !visualGrid.length) return;
 
     let instanceIndex = 0;
     let needsColorUpdate = false;
@@ -177,65 +53,46 @@ function SimulationGroup({
     for (let x = 0; x < gridSize; x++) {
       for (let y = 0; y < gridSize; y++) {
         for (let z = 0; z < gridSize; z++) {
-          const isAlive = logicGrid[x]?.[y]?.[z] === 1;
-          const visual = visualGrid[x]?.[y]?.[z];
+          const visualCell = visualGrid[x]?.[y]?.[z];
+          if (!visualCell) continue;
 
-          if (!visual) continue;
-
-          if (isAlive || visual.scale > 0.01) {
-            // Update position
-            tempObject.current.position.set(
-              x + centerOffset,
-              y + centerOffset,
-              z + centerOffset
-            );
-            
-            // Apply smooth easing to scale transition
-            const easedScale = visual.fadeState === 'appearing' 
-              ? visual.scale * visual.scale // Ease in quadratic
-              : visual.fadeState === 'disappearing'
-              ? visual.scale * visual.scale // Ease out quadratic
-              : visual.scale;
-            
-            tempObject.current.scale.setScalar(easedScale);
-            tempObject.current.updateMatrix();
-            cellInstances.setMatrixAt(instanceIndex, tempObject.current.matrix);
-
-            // Update color based on age and fade state
-            const ageRatio = Math.min(visual.age / MAX_AGE, 1);
-            const alphaMultiplier = visual.fadeState === 'appearing' ? visual.scale : 
-                                   visual.fadeState === 'disappearing' ? visual.scale * 0.8 : 1;
-            
-            tempColor.current.setHSL(
-              0.15 + ageRatio * 0.4, // Hue: yellow to cyan
-              0.8 * alphaMultiplier,
-              (0.3 + ageRatio * 0.4) * alphaMultiplier
-            );
-            cellInstances.setColorAt(instanceIndex, tempColor.current);
-
-            instanceIndex++;
-            needsColorUpdate = true;
+          const targetScale = logicGrid[x][y][z];
+          
+          // Smooth scale transition like standalone version
+          if (Math.abs(targetScale - visualCell.scale) > 0.001) {
+            visualCell.scale += (targetScale - visualCell.scale) * FADE_SPEED;
+            needsMatrixUpdate = true;
+          } else if (visualCell.scale !== targetScale) {
+            visualCell.scale = targetScale;
             needsMatrixUpdate = true;
           }
+          
+          // Position and scale
+          tempObject.current.position.set(
+            x + centerOffset, 
+            y + centerOffset, 
+            z + centerOffset
+          );
+          tempObject.current.scale.set(visualCell.scale, visualCell.scale, visualCell.scale);
+          tempObject.current.updateMatrix();
+          cellInstances.setMatrixAt(instanceIndex, tempObject.current.matrix);
+
+          // Age-based coloring like standalone version
+          if (visualCell.scale > 0.01) {
+            const ageRatio = Math.min(1, visualCell.age / MAX_AGE);
+            const hue = 0.5 + ageRatio * 0.25; // Cyan to purple
+            const lightness = 0.7 - ageRatio * 0.4; // Bright to dim
+            tempColor.current.setHSL(hue, 1.0, lightness);
+            cellInstances.setColorAt(instanceIndex, tempColor.current);
+            needsColorUpdate = true;
+          }
+          instanceIndex++;
         }
       }
     }
-
-    // Hide unused instances
-    for (let i = instanceIndex; i < cellInstances.count; i++) {
-      tempObject.current.scale.setScalar(0);
-      tempObject.current.updateMatrix();
-      cellInstances.setMatrixAt(i, tempObject.current.matrix);
-      needsMatrixUpdate = true;
-    }
-
-    if (needsMatrixUpdate) {
-      cellInstances.instanceMatrix.needsUpdate = true;
-    }
-    if (needsColorUpdate && cellInstances.instanceColor) {
-      cellInstances.instanceColor.needsUpdate = true;
-    }
-
+    
+    if (needsMatrixUpdate) cellInstances.instanceMatrix.needsUpdate = true;
+    if (needsColorUpdate && cellInstances.instanceColor) cellInstances.instanceColor.needsUpdate = true;
   }, [gridSize, logicGrid, visualGrid]);
 
   const maxInstances = gridSize ** 3;
@@ -323,9 +180,7 @@ export default function GameOfLife3D() {
       Array(size).fill(null).map(() =>
         Array(size).fill(null).map(() => ({ 
           scale: 0, 
-          age: 0, 
-          targetScale: 0, 
-          fadeState: 'stable' as 'appearing' | 'stable' | 'disappearing'
+          age: 0
         }))
       )
     );
@@ -359,9 +214,7 @@ export default function GameOfLife3D() {
             if (logic[x][y][z] === 1) {
               visual[x][y][z] = { 
                 scale: 1, 
-                age: 1, 
-                targetScale: 1, 
-                fadeState: 'stable' 
+                age: 1
               };
             }
           }
@@ -379,61 +232,6 @@ export default function GameOfLife3D() {
     resetSimulation(false);
   }, [resetSimulation]);
 
-  const updateVisualGrid = useCallback((newLogicGrid: Grid3D, oldVisualGrid: VisualCell[][][]) => {
-    const newVisualGrid = Array(gridSize).fill(null).map(() =>
-      Array(gridSize).fill(null).map(() =>
-        Array(gridSize).fill(null).map(() => ({ 
-          scale: 0, 
-          age: 0, 
-          targetScale: 0, 
-          fadeState: 'stable' as 'appearing' | 'stable' | 'disappearing'
-        }))
-      )
-    );
-
-    for (let x = 0; x < gridSize; x++) {
-      for (let y = 0; y < gridSize; y++) {
-        for (let z = 0; z < gridSize; z++) {
-          const isAlive = newLogicGrid[x][y][z] === 1;
-          const oldVisual = oldVisualGrid[x][y][z];
-
-          if (isAlive) {
-            // Cell is alive
-            const newAge = Math.min(oldVisual.age + 1, MAX_AGE);
-            if (oldVisual.scale === 0) {
-              // New cell - start fading in
-              newVisualGrid[x][y][z] = { 
-                scale: 0.1, 
-                age: newAge, 
-                targetScale: 1, 
-                fadeState: 'appearing' 
-              };
-            } else {
-              // Existing cell - continue or maintain
-              newVisualGrid[x][y][z] = { 
-                scale: Math.min(1, oldVisual.scale + FADE_IN_SPEED), 
-                age: newAge, 
-                targetScale: 1, 
-                fadeState: oldVisual.fadeState === 'appearing' && oldVisual.scale < 0.95 ? 'appearing' : 'stable' 
-              };
-            }
-          } else if (oldVisual.scale > 0.01) {
-            // Cell is dead but still visible - fade out
-            const newScale = Math.max(0, oldVisual.scale - FADE_OUT_SPEED);
-            newVisualGrid[x][y][z] = { 
-              scale: newScale, 
-              age: oldVisual.age, 
-              targetScale: 0, 
-              fadeState: 'disappearing' 
-            };
-          }
-        }
-      }
-    }
-
-    return newVisualGrid;
-  }, [gridSize]);
-
   const stepSimulation = useCallback(() => {
     if (!gameEngine.current) return;
     
@@ -444,14 +242,35 @@ export default function GameOfLife3D() {
       setAliveCells(newAliveCells);
       setGeneration(prev => prev + 1);
 
-      // Update visual grid
-      setVisualGrid(currentVisualGrid => 
-        updateVisualGrid(newLogicGrid, currentVisualGrid)
-      );
+      // Update visual grid - simplified approach
+      setVisualGrid(currentVisualGrid => {
+        for (let x = 0; x < gridSize; x++) {
+          for (let y = 0; y < gridSize; y++) {
+            for (let z = 0; z < gridSize; z++) {
+              const wasAlive = currentLogicGrid[x][y][z] === 1;
+              const isAlive = newLogicGrid[x][y][z] === 1;
+              
+              if (isAlive) {
+                if (wasAlive) {
+                  // Cell survived - age it
+                  currentVisualGrid[x][y][z].age = Math.min(MAX_AGE, currentVisualGrid[x][y][z].age + 1);
+                } else {
+                  // Cell was born - reset age
+                  currentVisualGrid[x][y][z].age = 1;
+                }
+              } else {
+                // Cell died - reset age
+                currentVisualGrid[x][y][z].age = 0;
+              }
+            }
+          }
+        }
+        return [...currentVisualGrid]; // Return new reference to trigger re-render
+      });
 
       return newLogicGrid;
     });
-  }, [updateVisualGrid]);
+  }, [gridSize]);
 
   const toggleSimulation = useCallback(() => {
     if (isRunning) {

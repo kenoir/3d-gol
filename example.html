@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Game of Life - Evolved</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+            overflow: hidden; /* Prevent scrollbars from interfering with layout */
+        }
+        #info-panel {
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #1f2937;
+        }
+        canvas {
+            display: block;
+        }
+        .control-label {
+            @apply text-sm font-medium text-gray-300;
+        }
+        .control-input {
+            @apply w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition;
+        }
+        /* Rewritten button styles with border */
+        .btn {
+            @apply w-full px-4 py-2.5 text-sm font-semibold text-white rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-200 ease-in-out transform hover:-translate-y-px active:translate-y-0 border-2 border-gray-400/50;
+        }
+        .btn-primary {
+             @apply bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 focus:ring-blue-400 hover:shadow-lg hover:shadow-blue-500/50;
+        }
+        .btn-secondary {
+            @apply bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 focus:ring-gray-500 hover:shadow-lg hover:shadow-gray-600/50;
+        }
+        .tooltip {
+            @apply absolute invisible group-hover:visible bg-gray-800 text-white text-xs rounded py-1 px-2 bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap;
+        }
+        /* Custom styles for range slider */
+        input[type="range"] {
+            @apply h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            transition: background-color 0.2s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background-color: #2563eb;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid #fff;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="flex flex-col md:flex-row h-screen">
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container" class="relative flex-grow h-1/2 md:h-full w-full md:w-auto">
+        <!-- Stats Overlay -->
+        <div id="stats-overlay" class="absolute top-4 left-4 z-10 bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 text-sm w-48 pointer-events-none">
+            <div class="space-y-2">
+                <div class="flex justify-between"><span>Generation:</span> <span id="generation-stat" class="font-mono">0</span></div>
+                <div class="flex justify-between"><span>Alive Cells:</span> <span id="alive-stat" class="font-mono">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls Panel -->
+    <div id="info-panel" class="w-full md:w-80 bg-gray-900/80 backdrop-blur-sm p-4 border-l border-gray-700 overflow-y-auto h-1/2 md:h-full flex-shrink-0">
+        <div class="space-y-6">
+            <h1 class="text-2xl font-bold text-white tracking-tight">3D Game of Life</h1>
+            
+            <!-- Simulation Controls -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-200 mb-3">Controls</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="play-pause-btn" class="btn btn-primary">Play</button>
+                    <button id="step-btn" class="btn btn-secondary">Step</button>
+                    <button id="randomize-btn" class="btn btn-secondary">Randomize</button>
+                    <button id="clear-btn" class="btn btn-secondary">Clear</button>
+                </div>
+            </div>
+
+            <!-- Parameters -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-200 mb-3">Parameters</h2>
+                <div class="space-y-4">
+                     <div class="group relative">
+                        <label for="grid-size" class="control-label">Grid Size</label>
+                        <div class="flex items-center space-x-3 mt-1">
+                           <input type="range" id="grid-size" min="5" max="100" value="50" class="w-full">
+                           <span id="grid-size-value" class="font-mono text-sm w-10 text-center bg-gray-700 rounded-md py-1">50</span>
+                        </div>
+                    </div>
+                    <div class="group relative">
+                        <label for="initial-density" class="control-label">Initial Density</label>
+                         <input type="range" id="initial-density" min="0.01" max="0.5" step="0.01" value="0.15" class="w-full mt-1">
+                    </div>
+                    <div class="group relative">
+                        <label for="speed" class="control-label">Simulation Speed</label>
+                        <input type="range" id="speed" min="50" max="1000" step="10" value="1000" class="w-full mt-1">
+                    </div>
+                </div>
+            </div>
+
+             <!-- Rules -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-200 mb-3">Rules</h2>
+                 <div class="space-y-4 bg-gray-800 rounded-lg p-3">
+                     <p class="text-xs text-center text-gray-400 font-semibold border-b border-gray-700 pb-2 mb-2">Periodic Boundaries Enabled</p>
+                    <div class="group relative">
+                        <label for="birth-rule" class="control-label">Birth Neighbors</label>
+                         <div class="flex items-center space-x-3 mt-1">
+                           <input type="range" id="birth-rule" min="1" max="26" value="5" class="w-full">
+                           <span id="birth-rule-value" class="font-mono text-sm w-8 text-center bg-gray-700 rounded-md py-1">5</span>
+                        </div>
+                    </div>
+                    <div class="group relative">
+                        <label for="survival-min" class="control-label">Survival Range (Min/Max)</label>
+                         <div class="flex items-center space-x-3 mt-1">
+                           <input type="range" id="survival-min" min="1" max="26" value="4" class="w-full">
+                           <span id="survival-min-value" class="font-mono text-sm w-8 text-center bg-gray-700 rounded-md py-1">4</span>
+                        </div>
+                         <div class="flex items-center space-x-3 mt-1">
+                           <input type="range" id="survival-max" min="1" max="26" value="5" class="w-full">
+                           <span id="survival-max-value" class="font-mono text-sm w-8 text-center bg-gray-700 rounded-md py-1">5</span>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+             <p class="text-xs text-center text-gray-500 pt-4">Use mouse to rotate (drag), zoom (scroll), and pan (right-click drag).</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- DOM ELEMENTS ---
+        const canvasContainer = document.getElementById('canvas-container');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const gridSizeSlider = document.getElementById('grid-size');
+        const gridSizeValueSpan = document.getElementById('grid-size-value');
+        const initialDensitySlider = document.getElementById('initial-density');
+        const speedSlider = document.getElementById('speed');
+        const birthRuleSlider = document.getElementById('birth-rule');
+        const birthRuleValueSpan = document.getElementById('birth-rule-value');
+        const survivalMinSlider = document.getElementById('survival-min');
+        const survivalMinValueSpan = document.getElementById('survival-min-value');
+        const survivalMaxSlider = document.getElementById('survival-max');
+        const survivalMaxValueSpan = document.getElementById('survival-max-value');
+        const generationStat = document.getElementById('generation-stat');
+        const aliveStat = document.getElementById('alive-stat');
+
+        // --- THREE.JS SETUP ---
+        let scene, camera, renderer, controls;
+        let simulationGroup; // Group for all simulation objects for easy rotation
+        const tempObject = new THREE.Object3D();
+        const tempColor = new THREE.Color();
+        const MAX_AGE = 15;
+        const FADE_SPEED = 0.15;
+
+        // --- GAME STATE ---
+        let gridSize = 50;
+        let logicGrid = [];
+        let visualGrid = [];
+        let isPlaying = false;
+        let generation = 0;
+        let aliveCells = 0;
+        let simulationInterval;
+        let isUserInteracting = false; // For auto-rotation
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111827);
+
+            // Group to hold all simulation elements, centered at the world origin
+            simulationGroup = new THREE.Group();
+            scene.add(simulationGroup);
+
+            camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 2000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            canvasContainer.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xcccccc, 0.8);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            directionalLight.position.set(1, 1, 0.5).normalize();
+            scene.add(directionalLight);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            window.addEventListener('resize', onWindowResize, false);
+            setupUIEventListeners();
+
+            resetSimulation();
+            animate();
+        }
+
+        function setupUIEventListeners() {
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            stepBtn.addEventListener('click', step);
+            randomizeBtn.addEventListener('click', () => resetSimulation(true));
+            clearBtn.addEventListener('click', () => resetSimulation(false));
+            
+            // Stop auto-rotation on pointer down (drag/pan), but not on wheel (zoom)
+            renderer.domElement.addEventListener('pointerdown', () => {
+                isUserInteracting = true;
+            });
+
+            gridSizeSlider.addEventListener('input', () => gridSizeValueSpan.textContent = gridSizeSlider.value);
+            gridSizeSlider.addEventListener('change', () => {
+                const newSize = parseInt(gridSizeSlider.value);
+                 if (newSize > 0 && newSize !== gridSize) {
+                    if (newSize > 75) console.warn('Warning: Grid sizes above 75 may cause severe performance issues.');
+                    gridSize = newSize;
+                    resetSimulation();
+                }
+            });
+            
+            birthRuleSlider.addEventListener('input', () => birthRuleValueSpan.textContent = birthRuleSlider.value);
+            survivalMinSlider.addEventListener('input', () => {
+                survivalMinValueSpan.textContent = survivalMinSlider.value;
+                if (parseInt(survivalMinSlider.value) > parseInt(survivalMaxSlider.value)) {
+                    survivalMaxSlider.value = survivalMinSlider.value;
+                    survivalMaxValueSpan.textContent = survivalMaxSlider.value;
+                }
+            });
+            survivalMaxSlider.addEventListener('input', () => {
+                survivalMaxValueSpan.textContent = survivalMaxSlider.value;
+                if (parseInt(survivalMaxSlider.value) < parseInt(survivalMinSlider.value)) {
+                    survivalMinSlider.value = survivalMaxSlider.value;
+                    survivalMinValueSpan.textContent = survivalMinSlider.value;
+                }
+            });
+
+            speedSlider.addEventListener('input', () => {
+                if(isPlaying) {
+                    stopSimulation();
+                    startSimulation();
+                }
+            });
+        }
+
+        function resetSimulation(randomize = true) {
+            isUserInteracting = false; // Re-enable auto-rotation on reset
+            stopSimulation();
+            if (isPlaying) {
+                isPlaying = false;
+                playPauseBtn.textContent = 'Play';
+                playPauseBtn.classList.remove('from-red-500', 'to-red-600');
+                playPauseBtn.classList.add('from-blue-600', 'to-indigo-700');
+            }
+
+            generation = 0;
+            aliveCells = 0;
+            updateStats();
+
+            // Clear previous simulation objects from the group
+            while(simulationGroup.children.length > 0){ 
+                simulationGroup.remove(simulationGroup.children[0]); 
+            }
+            // Reset group rotation
+            simulationGroup.rotation.set(0, 0, 0);
+
+            logicGrid = new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0)));
+            visualGrid = new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0).map(() => ({ scale: 0, age: 0 }))));
+            
+            if (randomize) {
+                const density = parseFloat(initialDensitySlider.value);
+                let liveCount = 0;
+                for (let x = 0; x < gridSize; x++) {
+                    for (let y = 0; y < gridSize; y++) {
+                        for (let z = 0; z < gridSize; z++) {
+                            if (Math.random() < density) {
+                                logicGrid[x][y][z] = 1;
+                                visualGrid[x][y][z] = { scale: 1, age: 1 };
+                                liveCount++;
+                            }
+                        }
+                    }
+                }
+                aliveCells = liveCount;
+                updateStats();
+            }
+            
+            // Center the camera and controls on the world origin
+            camera.position.set(gridSize * 1.5, gridSize * 1.5, gridSize * 1.5);
+            controls.target.set(0, 0, 0);
+            camera.lookAt(0, 0, 0);
+
+            createVisuals();
+        }
+
+        function createVisuals() {
+            // Translucent outer cube. BoxGeometry is inherently centered at (0,0,0).
+            const geometry = new THREE.BoxGeometry(gridSize, gridSize, gridSize);
+            const edges = new THREE.EdgesGeometry(geometry);
+            const mainCube = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x4b5563, transparent: true, opacity: 0.5 }));
+            simulationGroup.add(mainCube);
+            
+            // Instanced mesh for cells. Will be centered via updateVisuals.
+            const cellGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            const cellMaterial = new THREE.MeshLambertMaterial({color: 0xffffff, transparent: true});
+            const totalCells = gridSize * gridSize * gridSize;
+            const cellInstances = new THREE.InstancedMesh(cellGeometry, cellMaterial, totalCells);
+            simulationGroup.add(cellInstances);
+        }
+        
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playPauseBtn.textContent = 'Pause';
+                playPauseBtn.classList.remove('from-blue-600', 'to-indigo-700');
+                playPauseBtn.classList.add('from-red-500', 'to-red-600');
+                startSimulation();
+            } else {
+                playPauseBtn.textContent = 'Play';
+                playPauseBtn.classList.remove('from-red-500', 'to-red-600');
+                playPauseBtn.classList.add('from-blue-600', 'to-indigo-700');
+                stopSimulation();
+            }
+        }
+        
+        function startSimulation() {
+            const speed = 1050 - parseInt(speedSlider.value);
+            if(simulationInterval) clearInterval(simulationInterval);
+            simulationInterval = setInterval(step, speed);
+        }
+
+        function stopSimulation() {
+            clearInterval(simulationInterval);
+            simulationInterval = null;
+        }
+
+        function step() {
+            if (!logicGrid.length) return;
+
+            const birthRule = [parseInt(birthRuleSlider.value)];
+            const survivalMin = parseInt(survivalMinSlider.value);
+            const survivalMax = parseInt(survivalMaxSlider.value);
+            const survivalRule = [];
+            for (let i = survivalMin; i <= survivalMax; i++) {
+                survivalRule.push(i);
+            }
+            
+            const nextGrid = logicGrid.map(arr1 => arr1.map(arr2 => [...arr2]));
+            let newAliveCount = 0;
+
+            for (let x = 0; x < gridSize; x++) {
+                for (let y = 0; y < gridSize; y++) {
+                    for (let z = 0; z < gridSize; z++) {
+                        const neighbors = countNeighbors(x, y, z);
+                        const isAlive = logicGrid[x][y][z] === 1;
+
+                        if (isAlive) {
+                            if (survivalRule.includes(neighbors)) {
+                                nextGrid[x][y][z] = 1;
+                                visualGrid[x][y][z].age = Math.min(MAX_AGE, visualGrid[x][y][z].age + 1);
+                                newAliveCount++;
+                            } else {
+                                nextGrid[x][y][z] = 0;
+                                visualGrid[x][y][z].age = 0;
+                            }
+                        } else {
+                            if (birthRule.includes(neighbors)) {
+                                nextGrid[x][y][z] = 1;
+                                visualGrid[x][y][z].age = 1;
+                                newAliveCount++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            logicGrid = nextGrid;
+            aliveCells = newAliveCount;
+            generation++;
+            updateStats();
+        }
+
+        function countNeighbors(x, y, z) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    for (let k = -1; k <= 1; k++) {
+                        if (i === 0 && j === 0 && k === 0) continue;
+                        
+                        const nx = (x + i + gridSize) % gridSize;
+                        const ny = (y + j + gridSize) % gridSize;
+                        const nz = (z + k + gridSize) % gridSize;
+                        
+                        count += logicGrid[nx][ny][nz];
+                    }
+                }
+            }
+            return count;
+        }
+        
+        function updateVisuals() {
+            // The InstancedMesh is the second child of the group
+            const cellInstances = simulationGroup.children[1];
+            if (!cellInstances) return;
+
+            let instanceIndex = 0;
+            let needsColorUpdate = false;
+            let needsMatrixUpdate = false;
+            // This offset centers the grid of instances around the local (0,0,0) of the InstancedMesh
+            const centerOffset = -(gridSize - 1) / 2;
+
+            for (let x = 0; x < gridSize; x++) {
+                for (let y = 0; y < gridSize; y++) {
+                    for (let z = 0; z < gridSize; z++) {
+                        const visualCell = visualGrid[x][y][z];
+                        const targetScale = logicGrid[x][y][z];
+                        
+                        if (Math.abs(targetScale - visualCell.scale) > 0.001) {
+                            visualCell.scale += (targetScale - visualCell.scale) * FADE_SPEED;
+                            needsMatrixUpdate = true;
+                        } else if (visualCell.scale !== targetScale) {
+                             visualCell.scale = targetScale;
+                             needsMatrixUpdate = true;
+                        }
+                        
+                        tempObject.position.set(
+                            x + centerOffset, 
+                            y + centerOffset, 
+                            z + centerOffset
+                        );
+                        tempObject.scale.set(visualCell.scale, visualCell.scale, visualCell.scale);
+                        tempObject.updateMatrix();
+                        cellInstances.setMatrixAt(instanceIndex, tempObject.matrix);
+
+                        if (visualCell.scale > 0.01) {
+                             const ageRatio = Math.min(1, visualCell.age / MAX_AGE);
+                             const hue = 0.5 + ageRatio * 0.25;
+                             const lightness = 0.7 - ageRatio * 0.4; 
+                             tempColor.setHSL(hue, 1.0, lightness);
+                             cellInstances.setColorAt(instanceIndex, tempColor);
+                             needsColorUpdate = true;
+                        }
+                        instanceIndex++;
+                    }
+                }
+            }
+            if (needsMatrixUpdate) cellInstances.instanceMatrix.needsUpdate = true;
+            if (needsColorUpdate) cellInstances.instanceColor.needsUpdate = true;
+        }
+
+        function updateStats() {
+            generationStat.textContent = generation;
+            aliveStat.textContent = aliveCells;
+        }
+
+        function onWindowResize() {
+            camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isUserInteracting && simulationGroup) {
+                simulationGroup.rotation.y += 0.002;
+                simulationGroup.rotation.x += 0.001;
+            }
+
+            controls.update();
+            updateVisuals(); 
+            renderer.render(scene, camera);
+        }
+
+        // --- START ---
+        init();
+    </script>
+</body>
+</html>
