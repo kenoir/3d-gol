@@ -148,4 +148,4 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
-Built with ❤️ using modern web technologies. Explore the fascinating world of 3D cellular automata! 
+Built with ❤️ (&🤖) using modern web technologies. Explore the fascinating world of 3D cellular automata! 
