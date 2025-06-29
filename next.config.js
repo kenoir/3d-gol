@@ -5,8 +5,8 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  basePath: process.env.NODE_ENV === 'production' ? '/game-of-life' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/game-of-life/' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/3d-gol' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/3d-gol/' : '',
 }
 
 module.exports = nextConfig 
