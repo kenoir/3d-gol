@@ -1,12 +1,77 @@
-# Game of Life
+# 3D Game of Life
 
-A Next.js application deployable to GitHub Pages.
+An interactive 3D implementation of Conway's Game of Life built with Next.js, Three.js, and React Three Fiber. Experience cellular automata in three dimensions with beautiful visualizations and real-time controls.
 
-## Getting Started
+![3D Game of Life Screenshot](./screenshot.png)
 
-First, install the dependencies:
+## 🌐 Live Demo
+
+**[View Live Application](https://kenoir.github.io/3d-gol/)**
+
+## ✨ Features
+
+- **3D Visualization**: Watch cellular automata evolve in true 3D space
+- **Interactive Controls**: 
+  - Play/pause simulation
+  - Step through generations manually
+  - Randomize grid with custom density
+  - Clear simulation
+- **Customizable Parameters**:
+  - Grid size (5×5×5 to 50×50×50)
+  - Initial cell density
+  - Simulation speed
+- **Flexible Rules**:
+  - Adjustable birth neighbor count
+  - Configurable survival range
+  - Periodic boundary conditions
+- **Real-time Stats**: Track generation count, live cells, and grid size
+- **3D Navigation**: Orbit controls for zooming, panning, and rotating
+- **Responsive Design**: Works on desktop and mobile devices
+
+## 🎮 Controls
+
+### Main Interface
+- **▶/⏸ Button**: Start/pause the simulation
+- **⏭ Button**: Step forward one generation
+- **🎲 Button**: Randomize the grid with current density setting
+- **🗑 Button**: Clear all cells
+- **⚙ Button**: Open settings panel
+
+### Settings Panel
+- **Grid Size**: Adjust the 3D grid dimensions
+- **Initial Density**: Set the percentage of cells that start alive
+- **Speed**: Control simulation update frequency
+- **Birth Rule**: Number of neighbors required for a dead cell to become alive
+- **Survival Range**: Min/max neighbors for a live cell to survive
+
+### 3D Navigation
+- **Mouse Drag**: Rotate the view
+- **Scroll Wheel**: Zoom in/out
+- **Right Click + Drag**: Pan the view
+
+## 🚀 Technology Stack
+
+- **Next.js 14**: React framework with static site generation
+- **React 18**: Modern React with hooks and concurrent features
+- **React Three Fiber**: React renderer for Three.js
+- **Three.js**: 3D graphics library for WebGL rendering
+- **@react-three/drei**: Essential helpers and components for React Three Fiber
+- **TypeScript**: Type-safe development and enhanced developer experience
+
+## 🛠 Development
+
+### Prerequisites
+- Node.js 18 or higher
+- npm, yarn, or pnpm
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/kenoir/3d-gol.git
+cd 3d-gol
+
+# Install dependencies
 npm install
 # or
 yarn install
@@ -14,7 +79,7 @@ yarn install
 pnpm install
 ```
 
-Then, run the development server:
+### Running Development Server
 
 ```bash
 npm run dev
@@ -24,11 +89,9 @@ yarn dev
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-## Building for Production
-
-To build the application for production:
+### Building for Production
 
 ```bash
 npm run build
@@ -38,93 +101,51 @@ yarn build
 pnpm build
 ```
 
-## Deploying to GitHub Pages
+## 📊 3D Game of Life Rules
 
-### Automatic Deployment (Recommended)
+This implementation extends Conway's classic 2D Game of Life to three dimensions:
+
+- **Neighborhood**: Each cell has 26 neighbors (3×3×3 cube minus the center)
+- **Birth Rule**: A dead cell becomes alive if it has exactly N neighbors (configurable, default: 5)
+- **Survival Rule**: A live cell survives if it has between Min and Max neighbors (configurable, default: 4-6)
+- **Boundaries**: Periodic (toroidal) - cells on edges wrap around to the opposite side
+
+### Visual Design
+- **Age-based Coloring**: Cells change color based on how long they've been alive
+- **Smooth Transitions**: Dead cells fade out gradually for better visual continuity
+- **Instanced Rendering**: Optimized performance for large grids using Three.js instanced meshes
+
+## 🚀 Deployment
+
+### GitHub Pages (Automatic)
+
+The project includes GitHub Actions workflow for automatic deployment:
 
 1. Push your code to a GitHub repository
-2. Go to your repository settings
-3. Navigate to "Pages" in the sidebar
-4. Set the source to "GitHub Actions"
-5. The `.github/workflows/deploy.yml` file will handle the deployment automatically
+2. Go to repository Settings → Pages
+3. Set source to "GitHub Actions"
+4. The `.github/workflows/deploy.yml` handles deployment automatically
 
-### GitHub Actions Workflow
+### Manual Deployment
 
-The app uses a modern GitHub Actions workflow that:
+```bash
+# Build and export static files
+npm run build
 
-- Builds the Next.js application with static export
-- Uses GitHub's official Pages deployment action
-- Includes proper caching and error handling
-- Supports both `main` and `master` branches
-
-```yaml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build with Next.js
-        run: npm run build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./out
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+# Deploy the 'out' directory to your hosting service
 ```
 
-## Learn More
+## 🤝 Contributing
 
-To learn more about Next.js, take a look at the following resources:
+Contributions are welcome! Feel free to:
+- Report bugs or suggest features via GitHub issues
+- Submit pull requests for improvements
+- Share interesting cellular automata patterns you discover
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📝 License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+This project is open source and available under the [MIT License](LICENSE).
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details. 
+Built with ❤️ using modern web technologies. Explore the fascinating world of 3D cellular automata! 
