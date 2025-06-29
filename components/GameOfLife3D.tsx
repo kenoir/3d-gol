@@ -99,6 +99,13 @@ function SimulationGroup({
 
   return (
     <group ref={groupRef}>
+      {/* Outer grid cube wireframe */}
+      <lineSegments>
+        <edgesGeometry args={[new THREE.BoxGeometry(gridSize, gridSize, gridSize)]} />
+        <lineBasicMaterial color={0x4b5563} transparent opacity={0.5} />
+      </lineSegments>
+      
+      {/* Instanced cells */}
       <instancedMesh
         ref={instancedMeshRef}
         args={[undefined, undefined, maxInstances]}
