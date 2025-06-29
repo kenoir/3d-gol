@@ -125,7 +125,7 @@ function useAnimatedVisualGrid(visualGrid: VisualCell[][][], gridSize: number) {
 
   useEffect(() => {
     setAnimatedGrid(visualGrid);
-  }, [visualGrid]);
+  }, [visualGrid, animatedGrid.length]);
 
   return animatedGrid;
 }
