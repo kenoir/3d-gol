@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import { GameOfLife3D as GameEngine, type GameOfLife3DConfig, type Grid3D } from '../lib/gameOfLife3D';
 
 interface VisualCell {
   scale: number;
@@ -141,26 +142,39 @@ export default function GameOfLife3D() {
   const [isRunning, setIsRunning] = useState(false);
   const [generation, setGeneration] = useState(0);
   const [aliveCells, setAliveCells] = useState(0);
-  const [logicGrid, setLogicGrid] = useState<number[][][]>([]);
+  const [logicGrid, setLogicGrid] = useState<Grid3D>([]);
   const [visualGrid, setVisualGrid] = useState<VisualCell[][][]>([]);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
 
   // Simulation parameters
-  const [initialDensity, setInitialDensity] = useState(0.15);
+  const [initialDensity, setInitialDensity] = useState(0.08);
   const [speed, setSpeed] = useState(300);
-  const [birthRule, setBirthRule] = useState(5);
+  const [birthRule, setBirthRule] = useState(4);
   const [survivalMin, setSurvivalMin] = useState(4);
-  const [survivalMax, setSurvivalMax] = useState(6);
+  const [survivalMax, setSurvivalMax] = useState(5);
 
   // UI state
   const [showSettings, setShowSettings] = useState(false);
 
   const simulationInterval = useRef<NodeJS.Timeout | null>(null);
+  const gameEngine = useRef<GameEngine | null>(null);
+
+  // Initialize game engine
+  useEffect(() => {
+    const config: GameOfLife3DConfig = {
+      gridSize,
+      birthRule,
+      survivalMin,
+      survivalMax,
+      periodicBoundaries: true
+    };
+    gameEngine.current = new GameEngine(config);
+  }, [gridSize, birthRule, survivalMin, survivalMax]);
 
   const createEmptyGrids = useCallback((size: number) => {
-    const logic = Array(size).fill(null).map(() =>
-      Array(size).fill(null).map(() => Array(size).fill(0))
-    );
+    if (!gameEngine.current) return { logic: [], visual: [] };
+    
+    const logic = gameEngine.current.createEmptyGrid();
     const visual = Array(size).fill(null).map(() =>
       Array(size).fill(null).map(() =>
         Array(size).fill(null).map(() => ({ scale: 0, age: 0 }))
@@ -170,6 +184,8 @@ export default function GameOfLife3D() {
   }, []);
 
   const resetSimulation = useCallback((randomize = true) => {
+    if (!gameEngine.current) return;
+    
     setIsUserInteracting(false);
     if (simulationInterval.current) {
       clearInterval(simulationInterval.current);
@@ -179,22 +195,26 @@ export default function GameOfLife3D() {
     setGeneration(0);
     setAliveCells(0);
 
-    const { logic, visual } = createEmptyGrids(gridSize);
+    const { visual } = createEmptyGrids(gridSize);
+    let logic: Grid3D;
     
     if (randomize) {
-      let liveCount = 0;
+      logic = gameEngine.current.createRandomGrid(initialDensity);
+      const liveCount = gameEngine.current.countLivingCells(logic);
+      setAliveCells(liveCount);
+      
+      // Update visual grid to match logic grid
       for (let x = 0; x < gridSize; x++) {
         for (let y = 0; y < gridSize; y++) {
           for (let z = 0; z < gridSize; z++) {
-            if (Math.random() < initialDensity) {
-              logic[x][y][z] = 1;
+            if (logic[x][y][z] === 1) {
               visual[x][y][z] = { scale: 1, age: 1 };
-              liveCount++;
             }
           }
         }
       }
-      setAliveCells(liveCount);
+    } else {
+      logic = gameEngine.current.createEmptyGrid();
     }
     
     setLogicGrid(logic);
@@ -205,26 +225,7 @@ export default function GameOfLife3D() {
     resetSimulation(false);
   }, [resetSimulation]);
 
-  const countNeighbors = useCallback((grid: number[][][], x: number, y: number, z: number) => {
-    let count = 0;
-    for (let i = -1; i <= 1; i++) {
-      for (let j = -1; j <= 1; j++) {
-        for (let k = -1; k <= 1; k++) {
-          if (i === 0 && j === 0 && k === 0) continue;
-          
-          // Periodic boundaries
-          const nx = (x + i + gridSize) % gridSize;
-          const ny = (y + j + gridSize) % gridSize;
-          const nz = (z + k + gridSize) % gridSize;
-          
-          count += grid[nx][ny][nz];
-        }
-      }
-    }
-    return count;
-  }, [gridSize]);
-
-  const updateVisualGrid = useCallback((newLogicGrid: number[][][], oldVisualGrid: VisualCell[][][]) => {
+  const updateVisualGrid = useCallback((newLogicGrid: Grid3D, oldVisualGrid: VisualCell[][][]) => {
     const newVisualGrid = Array(gridSize).fill(null).map(() =>
       Array(gridSize).fill(null).map(() =>
         Array(gridSize).fill(null).map(() => ({ scale: 0, age: 0 }))
@@ -254,32 +255,11 @@ export default function GameOfLife3D() {
   }, [gridSize]);
 
   const stepSimulation = useCallback(() => {
+    if (!gameEngine.current) return;
+    
     setLogicGrid(currentLogicGrid => {
-      const newLogicGrid = createEmptyGrids(gridSize).logic;
-      let newAliveCells = 0;
-
-      for (let x = 0; x < gridSize; x++) {
-        for (let y = 0; y < gridSize; y++) {
-          for (let z = 0; z < gridSize; z++) {
-            const neighbors = countNeighbors(currentLogicGrid, x, y, z);
-            const isCurrentlyAlive = currentLogicGrid[x][y][z] === 1;
-
-            if (isCurrentlyAlive) {
-              // Survival rule
-              if (neighbors >= survivalMin && neighbors <= survivalMax) {
-                newLogicGrid[x][y][z] = 1;
-                newAliveCells++;
-              }
-            } else {
-              // Birth rule
-              if (neighbors === birthRule) {
-                newLogicGrid[x][y][z] = 1;
-                newAliveCells++;
-              }
-            }
-          }
-        }
-      }
+      const newLogicGrid = gameEngine.current!.step(currentLogicGrid);
+      const newAliveCells = gameEngine.current!.countLivingCells(newLogicGrid);
 
       setAliveCells(newAliveCells);
       setGeneration(prev => prev + 1);
@@ -291,7 +271,7 @@ export default function GameOfLife3D() {
 
       return newLogicGrid;
     });
-  }, [gridSize, countNeighbors, survivalMin, survivalMax, birthRule, createEmptyGrids, updateVisualGrid]);
+  }, [updateVisualGrid]);
 
   const toggleSimulation = useCallback(() => {
     if (isRunning) {

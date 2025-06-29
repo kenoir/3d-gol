@@ -103,12 +103,28 @@ pnpm build
 
 ## 📊 3D Game of Life Rules
 
-This implementation extends Conway's classic 2D Game of Life to three dimensions:
+This implementation extends Conway's classic 2D Game of Life to three dimensions with carefully balanced rules:
 
 - **Neighborhood**: Each cell has 26 neighbors (3×3×3 cube minus the center)
-- **Birth Rule**: A dead cell becomes alive if it has exactly N neighbors (configurable, default: 5)
-- **Survival Rule**: A live cell survives if it has between Min and Max neighbors (configurable, default: 4-6)
+- **Birth Rule**: A dead cell becomes alive if it has exactly N neighbors (configurable, default: 4)
+- **Survival Rule**: A live cell survives if it has between Min and Max neighbors (configurable, default: 4-5)
 - **Boundaries**: Periodic (toroidal) - cells on edges wrap around to the opposite side
+
+### Why Different Rules?
+The classic 2D Conway's rules (Birth: 3, Survival: 2-3) don't work in 3D because:
+- **2D**: Each cell has 8 neighbors
+- **3D**: Each cell has 26 neighbors (over 3× more!)
+
+The default 3D rules (Birth: 4, Survival: 4-5) create more balanced dynamics:
+- **Lower initial density** (8% vs typical 15% in 2D) prevents overcrowding
+- **Tighter survival range** prevents explosive growth
+- **Moderate birth rule** allows interesting pattern formation
+
+### Interesting Rule Variants to Try:
+- **Classic 3D Life**: Birth: 6-8, Survival: 5-7 (more conservative)
+- **Explosive Growth**: Birth: 3-4, Survival: 5-8 (rapid expansion)
+- **Crystal Growth**: Birth: 1, Survival: 1-2 (slow, crystalline patterns)
+- **Sparse Ecology**: Birth: 2, Survival: 1-3 (sparse, fragile patterns)
 
 ### Visual Design
 - **Age-based Coloring**: Cells change color based on how long they've been alive
@@ -141,6 +157,15 @@ Contributions are welcome! Feel free to:
 - Report bugs or suggest features via GitHub issues
 - Submit pull requests for improvements
 - Share interesting cellular automata patterns you discover
+
+## 🎯 Future Enhancements
+
+- **Pattern Library**: Save and load interesting 3D cellular automata patterns
+- **Rule Presets**: Quick selection of well-studied 3D CA rule systems
+- **Custom Rules**: More flexible rule definition system (e.g., range-based birth rules)  
+- **Performance Optimization**: GPU compute shaders for larger grids
+- **Pattern Analysis**: Tools to analyze pattern behavior, cycles, and stability
+- **VR Support**: Virtual reality viewing for immersive 3D exploration
 
 ## 📝 License
 
