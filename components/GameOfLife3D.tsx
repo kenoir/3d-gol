@@ -153,8 +153,7 @@ export default function GameOfLife3D() {
   const [survivalMax, setSurvivalMax] = useState(6);
 
   // UI state
-  const [showParams, setShowParams] = useState(false);
-  const [showRules, setShowRules] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const simulationInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -339,10 +338,10 @@ export default function GameOfLife3D() {
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden">
+    <div style={{ width: '100vw', height: '100vh', position: 'fixed', top: 0, left: 0, background: 'black', overflow: 'hidden' }}>
       <Canvas
         camera={{ position: [15, 15, 15], fov: 60 }}
-        style={{ width: '100vw', height: '100vh' }}
+        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 1 }}
       >
         <ambientLight intensity={0.3} />
         <directionalLight position={[10, 10, 5]} intensity={0.5} />
@@ -363,33 +362,78 @@ export default function GameOfLife3D() {
       </Canvas>
 
       {/* Stats Overlay - Minimalist */}
-      <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md rounded-lg p-3 border border-white/10 text-white font-mono text-sm">
+      <div style={{
+        position: 'absolute',
+        top: '16px',
+        left: '16px',
+        zIndex: 1000,
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(12px)',
+        borderRadius: '8px',
+        padding: '12px',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        color: 'white',
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        pointerEvents: 'auto'
+      }}>
         <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-400">Gen</span>
-            <span className="text-blue-400">{generation}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#9CA3AF' }}>Gen</span>
+            <span style={{ color: '#60A5FA' }}>{generation}</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-400">Live</span>
-            <span className="text-green-400">{aliveCells}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#9CA3AF' }}>Live</span>
+            <span style={{ color: '#34D399' }}>{aliveCells}</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-400">Grid</span>
-            <span className="text-purple-400">{gridSize}³</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#9CA3AF' }}>Grid</span>
+            <span style={{ color: '#A78BFA' }}>{gridSize}³</span>
           </div>
         </div>
       </div>
 
       {/* Main Controls - Floating Action Bar */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="flex items-center space-x-3 bg-black/70 backdrop-blur-md rounded-full px-4 py-3 border border-white/10 shadow-2xl">
+      <div style={{
+        position: 'absolute',
+        bottom: '16px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+        maxWidth: '90vw',
+        pointerEvents: 'auto'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(12px)',
+          borderRadius: '9999px',
+          padding: '12px 16px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }}>
           <button
             onClick={toggleSimulation}
-            className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all duration-200 transform hover:scale-110 ${
-              isRunning 
-                ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400' 
-                : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
-            }`}
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              transition: 'all 0.2s',
+              transform: 'scale(1)',
+              background: isRunning ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+              color: isRunning ? '#F87171' : '#4ADE80',
+              border: 'none',
+              cursor: 'pointer',
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             title={isRunning ? "Pause" : "Play"}
           >
             {isRunning ? "⏸" : "▶"}
@@ -398,17 +442,51 @@ export default function GameOfLife3D() {
           <button
             onClick={stepSimulation}
             disabled={isRunning}
-            className="w-12 h-12 rounded-full bg-blue-500/20 hover:bg-blue-500/30 disabled:bg-gray-500/10 disabled:text-gray-600 text-blue-400 flex items-center justify-center text-2xl transition-all duration-200 transform hover:scale-110 disabled:hover:scale-100"
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: isRunning ? 'rgba(107, 114, 128, 0.1)' : 'rgba(59, 130, 246, 0.2)',
+              color: isRunning ? '#6B7280' : '#60A5FA',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              transition: 'all 0.2s',
+              transform: 'scale(1)',
+              border: 'none',
+              cursor: isRunning ? 'not-allowed' : 'pointer',
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={(e) => !isRunning && (e.currentTarget.style.transform = 'scale(1.1)')}
+            onMouseLeave={(e) => !isRunning && (e.currentTarget.style.transform = 'scale(1)')}
             title="Step Forward"
           >
             ⏭
           </button>
           
-          <div className="w-px h-8 bg-white/20"></div>
+          <div style={{ width: '1px', height: '32px', background: 'rgba(255, 255, 255, 0.2)' }}></div>
           
           <button
             onClick={() => resetSimulation(true)}
-            className="w-12 h-12 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 flex items-center justify-center text-2xl transition-all duration-200 transform hover:scale-110"
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'rgba(234, 179, 8, 0.2)',
+              color: '#FACC15',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              transition: 'all 0.2s',
+              transform: 'scale(1)',
+              border: 'none',
+              cursor: 'pointer',
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             title="Randomize"
           >
             🎲
@@ -416,200 +494,319 @@ export default function GameOfLife3D() {
           
           <button
             onClick={clearSimulation}
-            className="w-12 h-12 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 flex items-center justify-center text-2xl transition-all duration-200 transform hover:scale-110"
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.2)',
+              color: '#F87171',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              transition: 'all 0.2s',
+              transform: 'scale(1)',
+              border: 'none',
+              cursor: 'pointer',
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             title="Clear All"
           >
             🗑
           </button>
           
-          <div className="w-px h-8 bg-white/20"></div>
+          <div style={{ width: '1px', height: '32px', background: 'rgba(255, 255, 255, 0.2)' }}></div>
           
           <button
-            onClick={() => setShowParams(!showParams)}
-            className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all duration-200 transform hover:scale-110 ${
-              showParams 
-                ? 'bg-purple-500/30 text-purple-300' 
-                : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-400'
-            }`}
-            title="Parameters"
+            onClick={() => setShowSettings(!showSettings)}
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: showSettings ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.2)',
+              color: showSettings ? '#C084FC' : '#A855F7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              transition: 'all 0.2s',
+              transform: 'scale(1)',
+              border: 'none',
+              cursor: 'pointer',
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            title="Settings"
           >
             ⚙
-          </button>
-          
-          <button
-            onClick={() => setShowRules(!showRules)}
-            className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all duration-200 transform hover:scale-110 ${
-              showRules 
-                ? 'bg-indigo-500/30 text-indigo-300' 
-                : 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400'
-            }`}
-            title="Rules"
-          >
-            📏
           </button>
         </div>
       </div>
 
-      {/* Parameters Panel - Sleek Design */}
-      {showParams && (
-        <div className="absolute bottom-24 left-6 z-10 w-80 bg-black/80 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+      {/* Combined Settings Panel - Center Overlay */}
+      {showSettings && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 1000,
+          width: '600px',
+          maxWidth: '90vw',
+          maxHeight: '80vh',
+          background: 'rgba(0, 0, 0, 0.9)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          padding: '32px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          color: 'white',
+          pointerEvents: 'auto',
+          overflow: 'auto'
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span>⚙</span>
-              <span>Parameters</span>
-            </h3>
+              <span>Game Settings</span>
+            </h2>
             <button
-              onClick={() => setShowParams(false)}
-              className="text-gray-400 hover:text-white transition-colors w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center"
+              onClick={() => setShowSettings(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#9CA3AF',
+                fontSize: '20px',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                pointerEvents: 'auto',
+                marginLeft: 'auto'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.color = 'white';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none';
+                e.currentTarget.style.color = '#9CA3AF';
+              }}
             >
               ✕
             </button>
           </div>
-          
-          <div className="space-y-6">
-            <div>
-              <label className="text-sm font-medium text-gray-300 block mb-3 flex items-center justify-between">
-                <span>Grid Size</span>
-                <span className="font-mono text-sm bg-gray-700/50 rounded-lg px-3 py-1 text-purple-400">
-                  {gridSize}³
-                </span>
-              </label>
-              <input 
-                type="range" 
-                min="5" 
-                max="50" 
-                value={gridSize}
-                onChange={(e) => {
-                  const newSize = parseInt(e.target.value);
-                  if (newSize > 40) console.warn('Warning: Grid sizes above 40 may cause performance issues.');
-                  setGridSize(newSize);
-                }}
-                className="w-full h-3 bg-gray-700/50 rounded-lg appearance-none cursor-pointer slider"
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-300 block mb-3 flex items-center justify-between">
-                <span>Initial Density</span>
-                <span className="font-mono text-sm bg-gray-700/50 rounded-lg px-3 py-1 text-green-400">
-                  {(initialDensity * 100).toFixed(0)}%
-                </span>
-              </label>
-              <input 
-                type="range" 
-                min="0.01" 
-                max="0.5" 
-                step="0.01"
-                value={initialDensity}
-                onChange={(e) => setInitialDensity(parseFloat(e.target.value))}
-                className="w-full h-3 bg-gray-700/50 rounded-lg appearance-none cursor-pointer slider"
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-300 block mb-3 flex items-center justify-between">
-                <span>Speed</span>
-                <span className="font-mono text-sm bg-gray-700/50 rounded-lg px-3 py-1 text-blue-400">
-                  {1050 - speed}ms
-                </span>
-              </label>
-              <input 
-                type="range" 
-                min="50" 
-                max="1000" 
-                step="10"
-                value={speed}
-                onChange={(e) => setSpeed(parseInt(e.target.value))}
-                className="w-full h-3 bg-gray-700/50 rounded-lg appearance-none cursor-pointer slider"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Rules Panel - Sleek Design */}
-      {showRules && (
-        <div className="absolute bottom-24 right-6 z-10 w-80 bg-black/80 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-              <span>📏</span>
-              <span>Rules</span>
-            </h3>
-            <button
-              onClick={() => setShowRules(false)}
-              className="text-gray-400 hover:text-white transition-colors w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center"
-            >
-              ✕
-            </button>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="inline-flex items-center space-x-2 bg-indigo-500/20 rounded-lg px-3 py-2">
-                <span className="text-indigo-400 text-sm">🌐</span>
-                <span className="text-sm text-indigo-300">Periodic Boundaries</span>
-              </div>
-            </div>
+          {/* Content in two columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
             
+            {/* Parameters Column */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-3 flex items-center justify-between">
-                <span>Birth Neighbors</span>
-                <span className="font-mono text-sm bg-gray-700/50 rounded-lg px-3 py-1 text-green-400">
-                  {birthRule}
-                </span>
-              </label>
-              <input 
-                type="range" 
-                min="1" 
-                max="26" 
-                value={birthRule}
-                onChange={(e) => setBirthRule(parseInt(e.target.value))}
-                className="w-full h-3 bg-gray-700/50 rounded-lg appearance-none cursor-pointer slider"
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-300 block mb-3">Survival Range</label>
-              <div className="space-y-4">
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#A855F7', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>📊</span>
+                <span>Parameters</span>
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Grid Size */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400">Minimum</span>
-                    <span className="font-mono text-sm bg-gray-700/50 rounded-lg px-3 py-1 text-yellow-400">
-                      {survivalMin}
+                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#D1D5DB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span>Grid Size</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '14px', background: 'rgba(107, 114, 128, 0.5)', borderRadius: '8px', padding: '4px 12px', color: '#A855F7' }}>
+                      {gridSize}³
                     </span>
-                  </div>
+                  </label>
                   <input 
                     type="range" 
-                    min="1" 
-                    max="26" 
-                    value={survivalMin}
+                    min="5" 
+                    max="50" 
+                    value={gridSize}
                     onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setSurvivalMin(val);
-                      if (val > survivalMax) setSurvivalMax(val);
+                      const newSize = parseInt(e.target.value);
+                      if (newSize > 40) console.warn('Warning: Grid sizes above 40 may cause performance issues.');
+                      setGridSize(newSize);
                     }}
-                    className="w-full h-3 bg-gray-700/50 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      width: '100%',
+                      height: '12px',
+                      background: 'rgba(107, 114, 128, 0.5)',
+                      borderRadius: '8px',
+                      appearance: 'none',
+                      cursor: 'pointer',
+                      pointerEvents: 'auto'
+                    }}
                   />
                 </div>
+                
+                {/* Initial Density */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400">Maximum</span>
-                    <span className="font-mono text-sm bg-gray-700/50 rounded-lg px-3 py-1 text-orange-400">
-                      {survivalMax}
+                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#D1D5DB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span>Initial Density</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '14px', background: 'rgba(107, 114, 128, 0.5)', borderRadius: '8px', padding: '4px 12px', color: '#34D399' }}>
+                      {(initialDensity * 100).toFixed(0)}%
                     </span>
+                  </label>
+                  <input 
+                    type="range" 
+                    min="0.01" 
+                    max="0.5" 
+                    step="0.01"
+                    value={initialDensity}
+                    onChange={(e) => setInitialDensity(parseFloat(e.target.value))}
+                    style={{
+                      width: '100%',
+                      height: '12px',
+                      background: 'rgba(107, 114, 128, 0.5)',
+                      borderRadius: '8px',
+                      appearance: 'none',
+                      cursor: 'pointer',
+                      pointerEvents: 'auto'
+                    }}
+                  />
+                </div>
+                
+                {/* Speed */}
+                <div>
+                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#D1D5DB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span>Speed</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '14px', background: 'rgba(107, 114, 128, 0.5)', borderRadius: '8px', padding: '4px 12px', color: '#60A5FA' }}>
+                      {1050 - speed}ms
+                    </span>
+                  </label>
+                  <input 
+                    type="range" 
+                    min="50" 
+                    max="1000" 
+                    step="10"
+                    value={speed}
+                    onChange={(e) => setSpeed(parseInt(e.target.value))}
+                    style={{
+                      width: '100%',
+                      height: '12px',
+                      background: 'rgba(107, 114, 128, 0.5)',
+                      borderRadius: '8px',
+                      appearance: 'none',
+                      cursor: 'pointer',
+                      pointerEvents: 'auto'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Rules Column */}
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#818CF8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>📏</span>
+                <span>Rules</span>
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Periodic Boundaries Info */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(99, 102, 241, 0.2)', borderRadius: '8px', padding: '8px 12px' }}>
+                    <span style={{ color: '#818CF8', fontSize: '14px' }}>🌐</span>
+                    <span style={{ fontSize: '14px', color: '#A5B4FC' }}>Periodic Boundaries</span>
                   </div>
+                </div>
+                
+                {/* Birth Rule */}
+                <div>
+                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#D1D5DB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span>Birth Neighbors</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '14px', background: 'rgba(107, 114, 128, 0.5)', borderRadius: '8px', padding: '4px 12px', color: '#34D399' }}>
+                      {birthRule}
+                    </span>
+                  </label>
                   <input 
                     type="range" 
                     min="1" 
                     max="26" 
-                    value={survivalMax}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setSurvivalMax(val);
-                      if (val < survivalMin) setSurvivalMin(val);
+                    value={birthRule}
+                    onChange={(e) => setBirthRule(parseInt(e.target.value))}
+                    style={{
+                      width: '100%',
+                      height: '12px',
+                      background: 'rgba(107, 114, 128, 0.5)',
+                      borderRadius: '8px',
+                      appearance: 'none',
+                      cursor: 'pointer',
+                      pointerEvents: 'auto'
                     }}
-                    className="w-full h-3 bg-gray-700/50 rounded-lg appearance-none cursor-pointer slider"
                   />
+                </div>
+                
+                {/* Survival Range */}
+                <div>
+                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#D1D5DB', marginBottom: '12px', display: 'block' }}>Survival Range</label>
+                  
+                  {/* Minimum */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#9CA3AF' }}>Minimum</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '14px', background: 'rgba(107, 114, 128, 0.5)', borderRadius: '8px', padding: '4px 12px', color: '#FACC15' }}>
+                        {survivalMin}
+                      </span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="26" 
+                      value={survivalMin}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setSurvivalMin(val);
+                        if (val > survivalMax) setSurvivalMax(val);
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '12px',
+                        background: 'rgba(107, 114, 128, 0.5)',
+                        borderRadius: '8px',
+                        appearance: 'none',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto'
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Maximum */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#9CA3AF' }}>Maximum</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '14px', background: 'rgba(107, 114, 128, 0.5)', borderRadius: '8px', padding: '4px 12px', color: '#FB923C' }}>
+                        {survivalMax}
+                      </span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="26" 
+                      value={survivalMax}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setSurvivalMax(val);
+                        if (val < survivalMin) setSurvivalMin(val);
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '12px',
+                        background: 'rgba(107, 114, 128, 0.5)',
+                        borderRadius: '8px',
+                        appearance: 'none',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto'
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -618,7 +815,7 @@ export default function GameOfLife3D() {
       )}
 
       <style jsx>{`
-        .slider::-webkit-slider-thumb {
+        input[type="range"]::-webkit-slider-thumb {
           appearance: none;
           height: 20px;
           width: 20px;
@@ -629,12 +826,12 @@ export default function GameOfLife3D() {
           border: 2px solid rgba(255, 255, 255, 0.1);
         }
         
-        .slider::-webkit-slider-thumb:hover {
+        input[type="range"]::-webkit-slider-thumb:hover {
           transform: scale(1.1);
           box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
         }
         
-        .slider::-moz-range-thumb {
+        input[type="range"]::-moz-range-thumb {
           height: 20px;
           width: 20px;
           border-radius: 50%;
@@ -644,27 +841,18 @@ export default function GameOfLife3D() {
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
         
-        @keyframes slide-in-from-bottom-4 {
-          from {
-            opacity: 0;
-            transform: translateY(16px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        /* Ensure proper stacking and pointer events */
+        canvas {
+          pointer-events: auto;
         }
         
-        .animate-in {
-          animation-fill-mode: both;
+        /* Override any pointer-events: none on UI elements */
+        button {
+          pointer-events: auto !important;
         }
         
-        .slide-in-from-bottom-4 {
-          animation-name: slide-in-from-bottom-4;
-        }
-        
-        .duration-300 {
-          animation-duration: 300ms;
+        input {
+          pointer-events: auto !important;
         }
       `}</style>
     </div>
